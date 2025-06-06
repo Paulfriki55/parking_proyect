@@ -1,0 +1,52 @@
+name: proyecto_parqueadero
+description: App para automatizar cobro de parqueadero de visitas en conjuntos
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+  flutter: ">=3.10.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # State Management
+  provider: ^6.1.1
+
+  # Database
+  sqflite: ^2.3.0
+  path: ^1.8.3
+  path_provider: ^2.1.1
+
+  # Camera & Images
+  camera: ^0.10.5+5
+  image_picker: ^1.0.4
+
+  # File Export
+  excel: ^4.0.2
+  pdf: ^3.10.7
+  open_file: ^3.3.2
+
+  # Date & Time
+  intl: ^0.18.1
+
+  # Permissions
+  permission_handler: ^11.0.1
+
+  # UI Components
+  cupertino_icons: ^1.0.2
+  flutter_speed_dial: ^7.0.0
+
+  # Utils
+  uuid: ^4.1.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/images/
