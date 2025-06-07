@@ -4,6 +4,9 @@ import '../models/house.dart';
 import '../models/vehicle.dart';
 import '../models/visit.dart';
 import '../models/pricing_config.dart';
+import '../models/user.dart';
+import '../models/parking_zone.dart';
+import '../models/house_vehicle.dart';
 
 class DatabaseService {
   static final DatabaseService instance = DatabaseService._init();
@@ -23,7 +26,7 @@ class DatabaseService {
 
     return await openDatabase(
       path,
-      version: 2, // Incrementamos la versión para la migración
+      version: 3, // Incrementamos la versión para las nuevas tablas
       onCreate: _createDB,
       onUpgrade: _upgradeDB,
     );
@@ -31,9 +34,114 @@ class DatabaseService {
 
   Future _upgradeDB(Database db, int oldVersion, int newVersion) async {
     if (oldVersion < 2) {
-      // Agregar la columna daily_rate si no existe
       await db.execute('ALTER TABLE pricing_config ADD COLUMN daily_rate REAL DEFAULT 10.0');
     }
+    
+    if (oldVersion < 3) {
+      // Crear nuevas tablas
+      await _createNewTables(db);
+      // Actualizar tabla visits
+      await db.execute('ALTER TABLE visits ADD COLUMN zone_id INTEGER');
+      await db.execute('ALTER TABLE visits ADD COLUMN is_weekend_parking INTEGER DEFAULT 0');
+      await db.execute('ALTER TABLE visits ADD COLUMN is_communal_parking INTEGER DEFAULT 0');
+    }
+  }
+
+  Future _createNewTables(Database db) async {
+    // Users table
+    await db.execute('''
+      CREATE TABLE users (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        email TEXT NOT NULL UNIQUE,
+        role TEXT NOT NULL,
+        is_active INTEGER DEFAULT 1,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      )
+    ''');
+
+    // Parking zones table
+    await db.execute('''
+      CREATE TABLE parking_zones (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        zone_number INTEGER NOT NULL UNIQUE,
+        type TEXT NOT NULL,
+        name TEXT NOT NULL,
+        description TEXT,
+        is_active INTEGER DEFAULT 1,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      )
+    ''');
+
+    // House vehicles table
+    await db.execute('''
+      CREATE TABLE house_vehicles (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        house_id INTEGER NOT NULL,
+        vehicle_id INTEGER NOT NULL,
+        is_owner_vehicle INTEGER DEFAULT 0,
+        registered_at TEXT NOT NULL,
+        removed_at TEXT,
+        is_active INTEGER DEFAULT 1,
+        FOREIGN KEY (house_id) REFERENCES houses (id),
+        FOREIGN KEY (vehicle_id) REFERENCES vehicles (id)
+      )
+    ''');
+
+    // Insertar zonas por defecto
+    await _insertDefaultZones(db);
+    
+    // Insertar usuario administrador por defecto
+    await _insertDefaultAdmin(db);
+  }
+
+  Future _insertDefaultZones(Database db) async {
+    final now = DateTime.now().toIso8601String();
+    
+    // Zonas de visitas (1-9)
+    for (int i = 1; i <= 9; i++) {
+      await db.insert('parking_zones', {
+        'zone_number': i,
+        'type': 'visitor',
+        'name': 'Zona de Visitas $i',
+        'description': 'Zona para vehículos de visitas',
+        'created_at': now,
+        'updated_at': now,
+      });
+    }
+    
+    // Zona 10 (overflow)
+    await db.insert('parking_zones', {
+      'zone_number': 10,
+      'type': 'overflow',
+      'name': 'Zona 10 - Vehículos Adicionales',
+      'description': 'Zona obligatoria para casas con más de 2 vehículos',
+      'created_at': now,
+      'updated_at': now,
+    });
+    
+    // Zona comunal
+    await db.insert('parking_zones', {
+      'zone_number': 11,
+      'type': 'communal',
+      'name': 'Casa Comunal',
+      'description': 'Parqueadero de la casa comunal (\$1 de ingreso)',
+      'created_at': now,
+      'updated_at': now,
+    });
+  }
+
+  Future _insertDefaultAdmin(Database db) async {
+    final now = DateTime.now().toIso8601String();
+    await db.insert('users', {
+      'name': 'Administrador',
+      'email': 'admin@parqueadero.com',
+      'role': 'administrator',
+      'created_at': now,
+      'updated_at': now,
+    });
   }
 
   Future _createDB(Database db, int version) async {
@@ -70,6 +178,7 @@ class DatabaseService {
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         vehicle_id INTEGER NOT NULL,
         house_id INTEGER NOT NULL,
+        zone_id INTEGER,
         entry_time TEXT NOT NULL,
         exit_time TEXT,
         photo_path TEXT,
@@ -77,14 +186,17 @@ class DatabaseService {
         is_paid INTEGER DEFAULT 0,
         notes TEXT,
         agent_name TEXT NOT NULL,
+        is_weekend_parking INTEGER DEFAULT 0,
+        is_communal_parking INTEGER DEFAULT 0,
         created_at TEXT NOT NULL,
         updated_at TEXT NOT NULL,
         FOREIGN KEY (vehicle_id) REFERENCES vehicles (id),
-        FOREIGN KEY (house_id) REFERENCES houses (id)
+        FOREIGN KEY (house_id) REFERENCES houses (id),
+        FOREIGN KEY (zone_id) REFERENCES parking_zones (id)
       )
     ''');
 
-    // Pricing config table - ACTUALIZADA
+    // Pricing config table
     await db.execute('''
       CREATE TABLE pricing_config (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -98,20 +210,103 @@ class DatabaseService {
       )
     ''');
 
-    // Insert default pricing config - ACTUALIZADA
+    await _createNewTables(db);
+
+    // Insert default pricing config
     final now = DateTime.now().toIso8601String();
     await db.insert('pricing_config', {
-      'hourly_rate': 1000.0,  // $1000 por hora
-      'daily_rate': 10000.0,  // $10000 por día (24 horas)
-      'free_minutes': 15,     // 15 minutos gratis
-      'minimum_charge': 500.0, // Mínimo $500
-      'maximum_charge': 50000.0, // Máximo $50000
+      'hourly_rate': 1000.0,
+      'daily_rate': 10000.0,
+      'free_minutes': 15,
+      'minimum_charge': 500.0,
+      'maximum_charge': 50000.0,
       'created_at': now,
       'updated_at': now,
     });
   }
 
-  // House operations
+  // User operations
+  Future<int> insertUser(User user) async {
+    final db = await instance.database;
+    return await db.insert('users', user.toMap());
+  }
+
+  Future<User?> getUserByEmail(String email) async {
+    final db = await instance.database;
+    final result = await db.query('users', where: 'email = ?', whereArgs: [email]);
+    if (result.isNotEmpty) {
+      return User.fromMap(result.first);
+    }
+    return null;
+  }
+
+  Future<int> updateUserRole(String email, UserRole role) async {
+    final db = await instance.database;
+    return await db.update(
+      'users',
+      {'role': role.name, 'updated_at': DateTime.now().toIso8601String()},
+      where: 'email = ?',
+      whereArgs: [email],
+    );
+  }
+
+  // Parking zones operations
+  Future<List<ParkingZone>> getAllParkingZones() async {
+    final db = await instance.database;
+    final result = await db.query('parking_zones', orderBy: 'zone_number');
+    return result.map((map) => ParkingZone.fromMap(map)).toList();
+  }
+
+  Future<List<ParkingZone>> getVisitorZones() async {
+    final db = await instance.database;
+    final result = await db.query(
+      'parking_zones', 
+      where: 'type = ? AND is_active = 1', 
+      whereArgs: ['visitor'],
+      orderBy: 'zone_number'
+    );
+    return result.map((map) => ParkingZone.fromMap(map)).toList();
+  }
+
+  // House vehicles operations
+  Future<int> insertHouseVehicle(HouseVehicle houseVehicle) async {
+    final db = await instance.database;
+    return await db.insert('house_vehicles', houseVehicle.toMap());
+  }
+
+  Future<List<Map<String, dynamic>>> getVehiclesByHouse(int houseId) async {
+    final db = await instance.database;
+    return await db.rawQuery('''
+      SELECT 
+        hv.*,
+        v.license_plate,
+        v.brand,
+        v.model,
+        v.color,
+        v.vehicle_type
+      FROM house_vehicles hv
+      JOIN vehicles v ON hv.vehicle_id = v.id
+      WHERE hv.house_id = ? AND hv.is_active = 1
+      ORDER BY hv.is_owner_vehicle DESC, hv.registered_at ASC
+    ''', [houseId]);
+  }
+
+  Future<Map<String, dynamic>> getHouseDebtSummary(int houseId) async {
+    final db = await instance.database;
+    final result = await db.rawQuery('''
+      SELECT 
+        COUNT(*) as total_visits,
+        SUM(CASE WHEN amount IS NOT NULL THEN amount ELSE 0 END) as total_amount,
+        SUM(CASE WHEN is_paid = 0 AND amount IS NOT NULL THEN amount ELSE 0 END) as pending_amount,
+        SUM(CASE WHEN is_paid = 1 AND amount IS NOT NULL THEN amount ELSE 0 END) as paid_amount
+      FROM visits 
+      WHERE house_id = ?
+    ''', [houseId]);
+    
+    return result.first;
+  }
+
+  // House operations (existing methods remain the same)
   Future<int> insertHouse(House house) async {
     final db = await instance.database;
     return await db.insert('houses', house.toMap());
@@ -147,7 +342,7 @@ class DatabaseService {
     return await db.delete('houses', where: 'id = ?', whereArgs: [id]);
   }
 
-  // Vehicle operations
+  // Vehicle operations (existing methods remain the same)
   Future<int> insertVehicle(Vehicle vehicle) async {
     final db = await instance.database;
     return await db.insert('vehicles', vehicle.toMap());
@@ -187,7 +382,7 @@ class DatabaseService {
     return await db.delete('vehicles', where: 'id = ?', whereArgs: [id]);
   }
 
-  // Visit operations
+  // Visit operations (updated methods)
   Future<int> insertVisit(Visit visit) async {
     final db = await instance.database;
     return await db.insert('visits', visit.toMap());
@@ -203,10 +398,13 @@ class DatabaseService {
         ve.model,
         ve.color,
         h.house_number,
-        h.owner_name
+        h.owner_name,
+        pz.name as zone_name,
+        pz.zone_number
       FROM visits v
       JOIN vehicles ve ON v.vehicle_id = ve.id
       JOIN houses h ON v.house_id = h.id
+      LEFT JOIN parking_zones pz ON v.zone_id = pz.id
       ORDER BY v.entry_time DESC
     ''');
   }
@@ -217,17 +415,40 @@ class DatabaseService {
       SELECT 
         v.*,
         ve.license_plate,
-        ve.brand,
-        ve.model,
-        ve.color,
         h.house_number,
-        h.owner_name
+        h.owner_name,
+        pz.name as zone_name,
+        pz.zone_number
       FROM visits v
       JOIN vehicles ve ON v.vehicle_id = ve.id
       JOIN houses h ON v.house_id = h.id
+      LEFT JOIN parking_zones pz ON v.zone_id = pz.id
       WHERE v.exit_time IS NULL
       ORDER BY v.entry_time DESC
     ''');
+  }
+
+  Future<List<Map<String, dynamic>>> getVisitsNeedingAlert() async {
+    final db = await instance.database;
+    final twoDaysAgo = DateTime.now().subtract(const Duration(days: 2)).toIso8601String();
+    
+    return await db.rawQuery('''
+      SELECT 
+        v.*,
+        ve.license_plate,
+        h.house_number,
+        h.owner_name,
+        pz.zone_number
+      FROM visits v
+      JOIN vehicles ve ON v.vehicle_id = ve.id
+      JOIN houses h ON v.house_id = h.id
+      LEFT JOIN parking_zones pz ON v.zone_id = pz.id
+      WHERE v.exit_time IS NULL 
+        AND v.entry_time < ?
+        AND v.is_weekend_parking = 0
+        AND (pz.type = 'visitor' OR pz.type IS NULL)
+      ORDER BY v.entry_time ASC
+    ''', [twoDaysAgo]);
   }
 
   Future<int> updateVisit(Visit visit) async {
@@ -245,7 +466,7 @@ class DatabaseService {
     return await db.delete('visits', where: 'id = ?', whereArgs: [id]);
   }
 
-  // Pricing config operations
+  // Pricing config operations (existing methods remain the same)
   Future<PricingConfig?> getPricingConfig() async {
     final db = await instance.database;
     final result = await db.query('pricing_config', limit: 1);

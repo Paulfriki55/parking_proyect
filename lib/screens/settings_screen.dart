@@ -77,7 +77,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         ),
                       ),
                       const SizedBox(height: 16),
-
+                      
                       // Minutos gratis
                       TextFormField(
                         controller: _freeMinutesController,
@@ -99,7 +99,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         },
                       ),
                       const SizedBox(height: 16),
-
+                      
                       // Tarifa por hora
                       TextFormField(
                         controller: _hourlyRateController,
@@ -121,7 +121,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         },
                       ),
                       const SizedBox(height: 16),
-
+                      
                       // Tarifa por día
                       TextFormField(
                         controller: _dailyRateController,
@@ -143,7 +143,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         },
                       ),
                       const SizedBox(height: 16),
-
+                      
                       Row(
                         children: [
                           Expanded(
@@ -190,7 +190,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         ],
                       ),
                       const SizedBox(height: 24),
-
+                      
                       SizedBox(
                         width: double.infinity,
                         child: ElevatedButton(
@@ -295,7 +295,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Widget _buildExampleRow(String timeText, Duration duration, PricingConfig config) {
     final amount = config.calculateAmount(duration);
     final details = config.getCalculationDetails(duration);
-
+    
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(

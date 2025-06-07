@@ -53,11 +53,11 @@ class VisitProvider with ChangeNotifier {
     try {
       final visitData = _visits.firstWhere((v) => v['id'] == visitId);
       final visit = Visit.fromMap(visitData);
-
+      
       final updatedVisit = visit.copyWith(
         exitTime: DateTime.now(),
         amount: _pricingConfig?.calculateAmount(
-            DateTime.now().difference(visit.entryTime)
+          DateTime.now().difference(visit.entryTime)
         ),
         updatedAt: DateTime.now(),
       );

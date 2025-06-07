@@ -47,44 +47,44 @@ class PricingConfig {
 
   double calculateAmount(Duration duration) {
     final totalMinutes = duration.inMinutes;
-
+    
     // Si está dentro del tiempo gratis, no se cobra
     if (totalMinutes <= freeMinutes) {
       return 0.0;
     }
-
+    
     final chargeableMinutes = totalMinutes - freeMinutes;
     final totalHours = chargeableMinutes / 60.0;
     final totalDays = totalHours / 24.0;
-
+    
     double amount = 0.0;
-
+    
     // Si es menos de 24 horas, cobrar por horas
     if (totalHours < 24) {
       amount = totalHours * hourlyRate;
-    }
+    } 
     // Si es 24 horas o más, cobrar por días completos + horas restantes
     else {
       final completeDays = totalHours ~/ 24; // Días completos
       final remainingHours = totalHours % 24; // Horas restantes
-
+      
       amount = (completeDays * dailyRate) + (remainingHours * hourlyRate);
     }
-
+    
     // Aplicar mínimo y máximo
     if (amount < minimumCharge) {
       amount = minimumCharge;
     } else if (amount > maximumCharge) {
       amount = maximumCharge;
     }
-
+    
     return amount;
   }
 
   // Método para obtener detalles del cálculo
   Map<String, dynamic> getCalculationDetails(Duration duration) {
     final totalMinutes = duration.inMinutes;
-
+    
     if (totalMinutes <= freeMinutes) {
       return {
         'isFree': true,
@@ -94,10 +94,10 @@ class PricingConfig {
         'description': 'Tiempo gratuito'
       };
     }
-
+    
     final chargeableMinutes = totalMinutes - freeMinutes;
     final totalHours = chargeableMinutes / 60.0;
-
+    
     if (totalHours < 24) {
       final amount = totalHours * hourlyRate;
       return {
@@ -113,7 +113,7 @@ class PricingConfig {
       final dayAmount = completeDays * dailyRate;
       final hourAmount = remainingHours * hourlyRate;
       final totalAmount = dayAmount + hourAmount;
-
+      
       return {
         'isFree': false,
         'completeDays': completeDays,

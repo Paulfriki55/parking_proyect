@@ -62,7 +62,7 @@ class _CameraServiceState extends State<CameraService> {
   Future<void> _takePicture() async {
     try {
       await _initializeControllerFuture;
-
+      
       final directory = await getApplicationDocumentsDirectory();
       final imagePath = join(
         directory.path,
@@ -70,10 +70,10 @@ class _CameraServiceState extends State<CameraService> {
       );
 
       final image = await _controller.takePicture();
-
+      
       // Copy the image to our app directory
       await image.saveTo(imagePath);
-
+      
       if (mounted) {
         Navigator.pop(this.context, imagePath);
       }

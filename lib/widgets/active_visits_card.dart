@@ -38,7 +38,7 @@ class ActiveVisitsCard extends StatelessWidget {
             Consumer<VisitProvider>(
               builder: (context, visitProvider, child) {
                 final activeVisits = visitProvider.activeVisits;
-
+                
                 if (activeVisits.isEmpty) {
                   return const Center(
                     child: Padding(
@@ -60,7 +60,7 @@ class ActiveVisitsCard extends StatelessWidget {
                     final visit = activeVisits[index];
                     final entryTime = DateTime.parse(visit['entry_time']);
                     final duration = DateTime.now().difference(entryTime);
-
+                    
                     return ListTile(
                       contentPadding: EdgeInsets.zero,
                       leading: CircleAvatar(
@@ -79,7 +79,7 @@ class ActiveVisitsCard extends StatelessWidget {
                       ),
                       subtitle: Text(
                         'Propietario: ${visit['owner_name']}\n'
-                            'Tiempo: ${_formatDuration(duration)}',
+                        'Tiempo: ${_formatDuration(duration)}',
                       ),
                       trailing: PopupMenuButton(
                         itemBuilder: (context) => [
@@ -103,7 +103,7 @@ class ActiveVisitsCard extends StatelessWidget {
   String _formatDuration(Duration duration) {
     final hours = duration.inHours;
     final minutes = duration.inMinutes % 60;
-
+    
     if (hours > 0) {
       return '${hours}h ${minutes}m';
     } else {

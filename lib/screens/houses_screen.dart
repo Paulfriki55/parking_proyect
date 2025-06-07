@@ -229,7 +229,7 @@ class _HousesScreenState extends State<HousesScreen> {
             onPressed: () async {
               Navigator.pop(context);
               final success = await context.read<HouseProvider>().deleteHouse(house.id!);
-
+              
               if (success) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(content: Text('Casa eliminada exitosamente')),

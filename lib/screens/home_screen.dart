@@ -76,8 +76,8 @@ class _HomeScreenState extends State<HomeScreen> {
                                 ),
                               ),
                               Text(
-                                appProvider.currentAgent.isEmpty
-                                    ? 'No asignado'
+                                appProvider.currentAgent.isEmpty 
+                                    ? 'No asignado' 
                                     : appProvider.currentAgent,
                                 style: const TextStyle(
                                   fontSize: 16,
@@ -151,7 +151,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     'Casas',
                     Icons.home,
                     Colors.blue,
-                        () => Navigator.push(
+                    () => Navigator.push(
                       context,
                       MaterialPageRoute(builder: (_) => const HousesScreen()),
                     ),
@@ -160,7 +160,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     'Visitas',
                     Icons.list,
                     Colors.green,
-                        () => Navigator.push(
+                    () => Navigator.push(
                       context,
                       MaterialPageRoute(builder: (_) => const VisitsScreen()),
                     ),
@@ -169,7 +169,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     'Reportes',
                     Icons.analytics,
                     Colors.purple,
-                        () => Navigator.push(
+                    () => Navigator.push(
                       context,
                       MaterialPageRoute(builder: (_) => const ReportsScreen()),
                     ),
@@ -178,7 +178,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     'Configuración',
                     Icons.settings,
                     Colors.grey,
-                        () => Navigator.push(
+                    () => Navigator.push(
                       context,
                       MaterialPageRoute(builder: (_) => const SettingsScreen()),
                     ),

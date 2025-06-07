@@ -170,13 +170,13 @@ class _VisitsScreenState extends State<VisitsScreen> with SingleTickerProviderSt
         ),
         trailing: isActive
             ? IconButton(
-          icon: const Icon(Icons.stop_circle, color: Colors.red),
-          onPressed: () => _endVisit(visit['id']),
-        )
+                icon: const Icon(Icons.stop_circle, color: Colors.red),
+                onPressed: () => _endVisit(visit['id']),
+              )
             : Icon(
-          visit['is_paid'] == 1 ? Icons.check_circle : Icons.pending,
-          color: visit['is_paid'] == 1 ? Colors.green : Colors.orange,
-        ),
+                visit['is_paid'] == 1 ? Icons.check_circle : Icons.pending,
+                color: visit['is_paid'] == 1 ? Colors.green : Colors.orange,
+              ),
         children: [
           Padding(
             padding: const EdgeInsets.all(16),
@@ -241,7 +241,7 @@ class _VisitsScreenState extends State<VisitsScreen> with SingleTickerProviderSt
   String _formatDuration(Duration duration) {
     final hours = duration.inHours;
     final minutes = duration.inMinutes % 60;
-
+    
     if (hours > 0) {
       return '${hours}h ${minutes}m';
     } else {

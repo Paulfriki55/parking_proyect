@@ -42,3 +42,14 @@ android {
 flutter {
     source = "../.."
 }
+
+dependencies {
+    // Google ML Kit Text Recognition for Latin characters (default)
+    implementation("com.google.mlkit:text-recognition:16.0.0")
+
+    // Add other language packages if needed in the future
+    // implementation("com.google.mlkit:text-recognition-chinese:16.0.0")
+    // implementation("com.google.mlkit:text-recognition-devanagari:16.0.0")
+    // implementation("com.google.mlkit:text-recognition-japanese:16.0.0")
+    // implementation("com.google.mlkit:text-recognition-korean:16.0.0")
+}

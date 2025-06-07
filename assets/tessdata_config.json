@@ -1,0 +1,11 @@
+{
+  "tessdata_path": "",
+  "language": "eng",
+  "oem": 3,
+  "psm": 8,
+  "whitelist": "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789",
+  "blacklist": "",
+  "preserve_interword_spaces": true,
+  "user_words": [],
+  "user_patterns": []
+}
