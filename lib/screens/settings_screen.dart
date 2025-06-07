@@ -14,6 +14,7 @@ class SettingsScreen extends StatefulWidget {
 class _SettingsScreenState extends State<SettingsScreen> {
   final _formKey = GlobalKey<FormState>();
   final _hourlyRateController = TextEditingController();
+  final _dailyRateController = TextEditingController();
   final _freeMinutesController = TextEditingController();
   final _minimumChargeController = TextEditingController();
   final _maximumChargeController = TextEditingController();
@@ -29,6 +30,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   @override
   void dispose() {
     _hourlyRateController.dispose();
+    _dailyRateController.dispose();
     _freeMinutesController.dispose();
     _minimumChargeController.dispose();
     _maximumChargeController.dispose();
@@ -39,6 +41,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final config = context.read<VisitProvider>().pricingConfig;
     if (config != null) {
       _hourlyRateController.text = config.hourlyRate.toString();
+      _dailyRateController.text = config.dailyRate.toString();
       _freeMinutesController.text = config.freeMinutes.toString();
       _minimumChargeController.text = config.minimumCharge.toString();
       _maximumChargeController.text = config.maximumCharge.toString();
@@ -74,31 +77,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         ),
                       ),
                       const SizedBox(height: 16),
-                      TextFormField(
-                        controller: _hourlyRateController,
-                        decoration: const InputDecoration(
-                          labelText: 'Tarifa por Hora (\$)',
-                          border: OutlineInputBorder(),
-                          prefixIcon: Icon(Icons.attach_money),
-                        ),
-                        keyboardType: TextInputType.number,
-                        validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return 'La tarifa por hora es requerida';
-                          }
-                          if (double.tryParse(value) == null) {
-                            return 'Ingrese un número válido';
-                          }
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 16),
+
+                      // Minutos gratis
                       TextFormField(
                         controller: _freeMinutesController,
                         decoration: const InputDecoration(
                           labelText: 'Minutos Gratis',
                           border: OutlineInputBorder(),
                           prefixIcon: Icon(Icons.timer),
+                          helperText: 'Tiempo gratuito antes de empezar a cobrar',
                         ),
                         keyboardType: TextInputType.number,
                         validator: (value) {
@@ -112,17 +99,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         },
                       ),
                       const SizedBox(height: 16),
+
+                      // Tarifa por hora
                       TextFormField(
-                        controller: _minimumChargeController,
+                        controller: _hourlyRateController,
                         decoration: const InputDecoration(
-                          labelText: 'Cobro Mínimo (\$)',
+                          labelText: 'Tarifa por Hora (\$)',
                           border: OutlineInputBorder(),
-                          prefixIcon: Icon(Icons.money),
+                          prefixIcon: Icon(Icons.access_time),
+                          helperText: 'Costo por cada hora (menos de 24h)',
                         ),
                         keyboardType: TextInputType.number,
                         validator: (value) {
                           if (value == null || value.isEmpty) {
-                            return 'El cobro mínimo es requerido';
+                            return 'La tarifa por hora es requerida';
                           }
                           if (double.tryParse(value) == null) {
                             return 'Ingrese un número válido';
@@ -131,17 +121,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         },
                       ),
                       const SizedBox(height: 16),
+
+                      // Tarifa por día
                       TextFormField(
-                        controller: _maximumChargeController,
+                        controller: _dailyRateController,
                         decoration: const InputDecoration(
-                          labelText: 'Cobro Máximo (\$)',
+                          labelText: 'Tarifa por Día (\$)',
                           border: OutlineInputBorder(),
-                          prefixIcon: Icon(Icons.money_off),
+                          prefixIcon: Icon(Icons.calendar_today),
+                          helperText: 'Costo por cada día completo (24 horas)',
                         ),
                         keyboardType: TextInputType.number,
                         validator: (value) {
                           if (value == null || value.isEmpty) {
-                            return 'El cobro máximo es requerido';
+                            return 'La tarifa por día es requerida';
                           }
                           if (double.tryParse(value) == null) {
                             return 'Ingrese un número válido';
@@ -149,7 +142,55 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           return null;
                         },
                       ),
+                      const SizedBox(height: 16),
+
+                      Row(
+                        children: [
+                          Expanded(
+                            child: TextFormField(
+                              controller: _minimumChargeController,
+                              decoration: const InputDecoration(
+                                labelText: 'Cobro Mínimo (\$)',
+                                border: OutlineInputBorder(),
+                                prefixIcon: Icon(Icons.money),
+                              ),
+                              keyboardType: TextInputType.number,
+                              validator: (value) {
+                                if (value == null || value.isEmpty) {
+                                  return 'El cobro mínimo es requerido';
+                                }
+                                if (double.tryParse(value) == null) {
+                                  return 'Ingrese un número válido';
+                                }
+                                return null;
+                              },
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: TextFormField(
+                              controller: _maximumChargeController,
+                              decoration: const InputDecoration(
+                                labelText: 'Cobro Máximo (\$)',
+                                border: OutlineInputBorder(),
+                                prefixIcon: Icon(Icons.money_off),
+                              ),
+                              keyboardType: TextInputType.number,
+                              validator: (value) {
+                                if (value == null || value.isEmpty) {
+                                  return 'El cobro máximo es requerido';
+                                }
+                                if (double.tryParse(value) == null) {
+                                  return 'Ingrese un número válido';
+                                }
+                                return null;
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
                       const SizedBox(height: 24),
+
                       SizedBox(
                         width: double.infinity,
                         child: ElevatedButton(
@@ -163,6 +204,28 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               : const Text('Guardar Configuración'),
                         ),
                       ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              // Simulador de cálculo
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Simulador de Tarifas',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      _buildCalculationExample(),
                     ],
                   ),
                 ),
@@ -198,7 +261,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         leading: const Icon(Icons.help),
                         title: const Text('Ayuda y Soporte'),
                         onTap: () {
-                          // Show help dialog or navigate to help screen
+                          _showHelpDialog();
                         },
                       ),
                     ],
@@ -208,6 +271,45 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildCalculationExample() {
+    final config = context.watch<VisitProvider>().pricingConfig;
+    if (config == null) return const Text('Cargando...');
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildExampleRow('30 minutos', Duration(minutes: 30), config),
+        _buildExampleRow('2 horas', Duration(hours: 2), config),
+        _buildExampleRow('12 horas', Duration(hours: 12), config),
+        _buildExampleRow('24 horas (1 día)', Duration(hours: 24), config),
+        _buildExampleRow('30 horas', Duration(hours: 30), config),
+        _buildExampleRow('48 horas (2 días)', Duration(hours: 48), config),
+      ],
+    );
+  }
+
+  Widget _buildExampleRow(String timeText, Duration duration, PricingConfig config) {
+    final amount = config.calculateAmount(duration);
+    final details = config.getCalculationDetails(duration);
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(timeText),
+          Text(
+            '\$${amount.toStringAsFixed(0)}',
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              color: amount > 0 ? Colors.green : Colors.grey,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -228,6 +330,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       final newConfig = PricingConfig(
         id: currentConfig?.id ?? 1,
         hourlyRate: double.parse(_hourlyRateController.text),
+        dailyRate: double.parse(_dailyRateController.text),
         freeMinutes: int.parse(_freeMinutesController.text),
         minimumCharge: double.parse(_minimumChargeController.text),
         maximumCharge: double.parse(_maximumChargeController.text),
@@ -250,5 +353,51 @@ class _SettingsScreenState extends State<SettingsScreen> {
         _isLoading = false;
       });
     }
+  }
+
+  void _showHelpDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Cómo Funciona el Sistema de Tarifas'),
+        content: const SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                '🕐 Minutos Gratis:',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              Text('Tiempo inicial sin costo (ej: 15 minutos)'),
+              SizedBox(height: 12),
+              Text(
+                '⏰ Tarifa por Hora:',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              Text('Se aplica cuando la estadía es menor a 24 horas'),
+              SizedBox(height: 12),
+              Text(
+                '📅 Tarifa por Día:',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              Text('Se aplica por cada día completo (24 horas)'),
+              SizedBox(height: 12),
+              Text(
+                '💰 Ejemplo:',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              Text('• 30 horas = 1 día + 6 horas\n• Costo = (1 × tarifa diaria) + (6 × tarifa por hora)'),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Entendido'),
+          ),
+        ],
+      ),
+    );
   }
 }

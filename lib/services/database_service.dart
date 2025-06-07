@@ -23,9 +23,17 @@ class DatabaseService {
 
     return await openDatabase(
       path,
-      version: 1,
+      version: 2, // Incrementamos la versión para la migración
       onCreate: _createDB,
+      onUpgrade: _upgradeDB,
     );
+  }
+
+  Future _upgradeDB(Database db, int oldVersion, int newVersion) async {
+    if (oldVersion < 2) {
+      // Agregar la columna daily_rate si no existe
+      await db.execute('ALTER TABLE pricing_config ADD COLUMN daily_rate REAL DEFAULT 10.0');
+    }
   }
 
   Future _createDB(Database db, int version) async {
@@ -76,11 +84,12 @@ class DatabaseService {
       )
     ''');
 
-    // Pricing config table
+    // Pricing config table - ACTUALIZADA
     await db.execute('''
       CREATE TABLE pricing_config (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         hourly_rate REAL NOT NULL,
+        daily_rate REAL NOT NULL,
         free_minutes INTEGER DEFAULT 15,
         minimum_charge REAL NOT NULL,
         maximum_charge REAL NOT NULL,
@@ -89,13 +98,14 @@ class DatabaseService {
       )
     ''');
 
-    // Insert default pricing config
+    // Insert default pricing config - ACTUALIZADA
     final now = DateTime.now().toIso8601String();
     await db.insert('pricing_config', {
-      'hourly_rate': 2000.0,
-      'free_minutes': 15,
-      'minimum_charge': 1000.0,
-      'maximum_charge': 10000.0,
+      'hourly_rate': 1000.0,  // $1000 por hora
+      'daily_rate': 10000.0,  // $10000 por día (24 horas)
+      'free_minutes': 15,     // 15 minutos gratis
+      'minimum_charge': 500.0, // Mínimo $500
+      'maximum_charge': 50000.0, // Máximo $50000
       'created_at': now,
       'updated_at': now,
     });
