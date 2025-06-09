@@ -16,7 +16,7 @@ import '../services/camera_service.dart';
 import '../services/ocr_service.dart';
 import '../services/database_service.dart';
 import '../utils/vehicle_colors.dart';
-import '../widgets/ocr_result_dialog.dart';
+import '../models/house_vehicle.dart';
 
 class VehicleRegistrationScreen extends StatefulWidget {
   const VehicleRegistrationScreen({super.key});
@@ -286,15 +286,16 @@ class _VehicleRegistrationScreenState extends State<VehicleRegistrationScreen> {
                           labelText: 'Placa *',
                           border: OutlineInputBorder(),
                           prefixIcon: Icon(Icons.confirmation_number),
-                          helperText: 'Ej: ABC123 o ABC12D',
+                          helperText: 'Ej: ABC-123 o ABC-12D',
                         ),
                         textCapitalization: TextCapitalization.characters,
                         validator: (value) {
                           if (value == null || value.isEmpty) {
                             return 'La placa es requerida';
                           }
-                          if (!OCRService.isValidLicensePlate(value)) {
-                            return 'Formato de placa inválido';
+                          // Validar formato con guión
+                          if (!_isValidPlateFormat(value)) {
+                            return 'Formato de placa inválido (use ABC-123)';
                           }
                           return null;
                         },
@@ -636,6 +637,19 @@ class _VehicleRegistrationScreenState extends State<VehicleRegistrationScreen> {
     );
   }
 
+  /// Valida el formato de placa con guión
+  bool _isValidPlateFormat(String plate) {
+    // Formatos válidos con guión:
+    // ABC-123, ABC-12D, ABC-1234
+    final validFormats = [
+      RegExp(r'^[A-Z]{3}-[0-9]{3}$'),        // ABC-123
+      RegExp(r'^[A-Z]{3}-[0-9]{2}[A-Z]$'),   // ABC-12D
+      RegExp(r'^[A-Z]{3}-[0-9]{4}$'),        // ABC-1234
+    ];
+
+    return validFormats.any((regex) => regex.hasMatch(plate.toUpperCase()));
+  }
+
   Color _getColorFromName(String colorName) {
     switch (colorName.toLowerCase()) {
       case 'blanco': return Colors.white;
@@ -711,20 +725,28 @@ class _VehicleRegistrationScreenState extends State<VehicleRegistrationScreen> {
         });
       }
 
-      if (ocrResult != null) {
-        debugPrint('OCR completado. Placas encontradas: ${ocrResult['possiblePlates']}');
+      if (ocrResult != null && ocrResult['bestPlate'] != null) {
+        final detectedPlate = ocrResult['bestPlate'] as String;
+        debugPrint('OCR completado. Placa detectada: $detectedPlate');
+
+        // Automáticamente llenar el campo de placa
+        setState(() {
+          _licensePlateController.text = detectedPlate;
+        });
 
         if (mounted) {
-          await showDialog(
-            context: context,
-            builder: (context) => OCRResultDialog(
-              imagePath: _photoPath!,
-              ocrResult: ocrResult,
-              onPlateSelected: (plate) {
-                setState(() {
-                  _licensePlateController.text = plate;
-                });
-              },
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Placa detectada: $detectedPlate'),
+              backgroundColor: Colors.green,
+              action: SnackBarAction(
+                label: 'Editar',
+                textColor: Colors.white,
+                onPressed: () {
+                  // Focus en el campo de texto para editar
+                  FocusScope.of(context).requestFocus(FocusNode());
+                },
+              ),
             ),
           );
         }
@@ -732,7 +754,7 @@ class _VehicleRegistrationScreenState extends State<VehicleRegistrationScreen> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('No se pudo detectar texto en la imagen. Verifique que la placa sea visible y esté bien iluminada.'),
+              content: Text('No se pudo detectar una placa válida. Ingrese manualmente.'),
               duration: Duration(seconds: 4),
             ),
           );
@@ -807,6 +829,27 @@ class _VehicleRegistrationScreenState extends State<VehicleRegistrationScreen> {
         vehicleId = existingVehicle!.id!;
       } else {
         vehicleId = existingVehicle.id!;
+      }
+
+      // Registrar la relación vehículo-casa si no existe
+      try {
+        final existingRelation = await DatabaseService.instance.getVehiclesByHouse(_selectedHouse!.id!);
+        final hasRelation = existingRelation.any((v) => v['vehicle_id'] == vehicleId);
+
+        if (!hasRelation) {
+          final houseVehicle = HouseVehicle(
+            houseId: _selectedHouse!.id!,
+            vehicleId: vehicleId,
+            isOwnerVehicle: false, // Es una visita
+            registeredAt: now,
+          );
+
+          await DatabaseService.instance.insertHouseVehicle(houseVehicle);
+          debugPrint('✅ Relación vehículo-casa registrada');
+        }
+      } catch (e) {
+        debugPrint('⚠️ Error registrando relación vehículo-casa: $e');
+        // No es crítico, continuamos con el registro de la visita
       }
 
       // Calculate amount based on parking type

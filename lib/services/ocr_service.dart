@@ -160,9 +160,10 @@ class OCRService {
                 final cleanedLine = cleanLicensePlate(lineText);
 
                 if (isValidLicensePlate(cleanedLine)) {
-                  if (!possiblePlates.contains(cleanedLine)) {
-                    possiblePlates.add(cleanedLine);
-                    debugPrint('🎯 Placa válida encontrada en línea: $cleanedLine');
+                  final formattedPlate = formatPlateWithDash(cleanedLine);
+                  if (!possiblePlates.contains(formattedPlate)) {
+                    possiblePlates.add(formattedPlate);
+                    debugPrint('🎯 Placa válida encontrada en línea: $formattedPlate');
                   }
                 }
 
@@ -172,9 +173,10 @@ class OCRService {
                   final cleanedElement = cleanLicensePlate(elementText);
 
                   if (isValidLicensePlate(cleanedElement)) {
-                    if (!possiblePlates.contains(cleanedElement)) {
-                      possiblePlates.add(cleanedElement);
-                      debugPrint('🎯 Placa válida encontrada en elemento: $cleanedElement');
+                    final formattedPlate = formatPlateWithDash(cleanedElement);
+                    if (!possiblePlates.contains(formattedPlate)) {
+                      possiblePlates.add(formattedPlate);
+                      debugPrint('🎯 Placa válida encontrada en elemento: $formattedPlate');
                     }
                   }
                 }
@@ -186,9 +188,10 @@ class OCRService {
             for (String line in lines) {
               final cleanedLine = cleanLicensePlate(line);
               if (isValidLicensePlate(cleanedLine)) {
-                if (!possiblePlates.contains(cleanedLine)) {
-                  possiblePlates.add(cleanedLine);
-                  debugPrint('🎯 Placa válida encontrada: $cleanedLine');
+                final formattedPlate = formatPlateWithDash(cleanedLine);
+                if (!possiblePlates.contains(formattedPlate)) {
+                  possiblePlates.add(formattedPlate);
+                  debugPrint('🎯 Placa válida encontrada: $formattedPlate');
                 }
               }
 
@@ -197,9 +200,10 @@ class OCRService {
               for (String word in words) {
                 final cleanedWord = cleanLicensePlate(word);
                 if (isValidLicensePlate(cleanedWord)) {
-                  if (!possiblePlates.contains(cleanedWord)) {
-                    possiblePlates.add(cleanedWord);
-                    debugPrint('🎯 Placa válida en palabra: $cleanedWord');
+                  final formattedPlate = formatPlateWithDash(cleanedWord);
+                  if (!possiblePlates.contains(formattedPlate)) {
+                    possiblePlates.add(formattedPlate);
+                    debugPrint('🎯 Placa válida en palabra: $formattedPlate');
                   }
                 }
               }
@@ -227,9 +231,12 @@ class OCRService {
 
         for (final match in matches) {
           final candidate = match.group(0)!;
-          if (!possiblePlates.contains(candidate)) {
-            possiblePlates.add(candidate);
-            debugPrint('🎯 Candidato permisivo: $candidate');
+          if (isValidLicensePlate(candidate)) {
+            final formattedPlate = formatPlateWithDash(candidate);
+            if (!possiblePlates.contains(formattedPlate)) {
+              possiblePlates.add(formattedPlate);
+              debugPrint('🎯 Candidato permisivo: $formattedPlate');
+            }
           }
         }
       }
@@ -261,6 +268,33 @@ class OCRService {
         'error': e.toString(),
       };
     }
+  }
+
+  /// Formatea una placa agregando un guión entre letras y números
+  static String formatPlateWithDash(String plate) {
+    if (plate.length < 6) return plate;
+
+    // Para formato ABC123 -> ABC-123
+    if (RegExp(r'^[A-Z]{3}[0-9]{3}$').hasMatch(plate)) {
+      return '${plate.substring(0, 3)}-${plate.substring(3)}';
+    }
+
+    // Para formato ABC12D -> ABC-12D
+    if (RegExp(r'^[A-Z]{3}[0-9]{2}[A-Z]$').hasMatch(plate)) {
+      return '${plate.substring(0, 3)}-${plate.substring(3)}';
+    }
+
+    // Para formato ABC1234 -> ABC-1234
+    if (RegExp(r'^[A-Z]{3}[0-9]{4}$').hasMatch(plate)) {
+      return '${plate.substring(0, 3)}-${plate.substring(3)}';
+    }
+
+    // Si no coincide con ningún formato conocido, intentar separar en posición 3
+    if (plate.length >= 6) {
+      return '${plate.substring(0, 3)}-${plate.substring(3)}';
+    }
+
+    return plate;
   }
 
   /// Calcula la confianza promedio de un bloque de texto
@@ -452,7 +486,7 @@ class OCRService {
     for (String line in lines) {
       final cleanedLine = cleanLicensePlate(line);
       if (isValidLicensePlate(cleanedLine)) {
-        return cleanedLine;
+        return formatPlateWithDash(cleanedLine);
       }
 
       // Buscar patrones dentro de la línea
@@ -460,7 +494,7 @@ class OCRService {
       for (String word in words) {
         final cleanedWord = cleanLicensePlate(word);
         if (isValidLicensePlate(cleanedWord)) {
-          return cleanedWord;
+          return formatPlateWithDash(cleanedWord);
         }
       }
     }
@@ -468,7 +502,7 @@ class OCRService {
     // Si no encuentra una placa válida, intentar con todo el texto
     final cleanedFullText = cleanLicensePlate(text);
     if (isValidLicensePlate(cleanedFullText)) {
-      return cleanedFullText;
+      return formatPlateWithDash(cleanedFullText);
     }
 
     return null;
@@ -527,13 +561,13 @@ class OCRService {
     return corrected;
   }
 
-  /// Valida si el texto corresponde a una placa colombiana válida
+  /// Valida si el texto corresponde a una placa colombiana válida (sin guión)
   static bool isValidLicensePlate(String plate) {
     if (plate.length < 6 || plate.length > 7) {
       return false;
     }
 
-    // Formatos válidos para Colombia:
+    // Formatos válidos para Colombia (sin guión):
     // ABC123 (formato antiguo)
     // ABC12D (formato nuevo)
     // ABC1234 (algunos casos especiales)
